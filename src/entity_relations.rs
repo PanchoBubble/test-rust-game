@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::components::*;
+use bevy::prelude::*;
 use std::collections::HashMap;
 
 /// Entity relationship components for creating hierarchies and references
@@ -48,19 +48,26 @@ pub fn query_parent_child_relationships(
     children: Query<(Entity, &ChildOf)>,
 ) {
     println!("=== Parent-Child Relationships ===");
-    
+
     // Find all parents and their children
     for (parent_entity, children_component) in parents.iter() {
-        println!("Parent {:?} has {} children:", parent_entity, children_component.0.len());
+        println!(
+            "Parent {:?} has {} children:",
+            parent_entity,
+            children_component.0.len()
+        );
         for &child_entity in &children_component.0 {
             println!("  - Child: {:?}", child_entity);
         }
     }
-    
+
     // Find all children and their parents
     println!("\nChild-to-Parent lookup:");
     for (child_entity, child_of) in children.iter() {
-        println!("Child {:?} belongs to parent {:?}", child_entity, child_of.0);
+        println!(
+            "Child {:?} belongs to parent {:?}",
+            child_entity, child_of.0
+        );
     }
 }
 
@@ -72,19 +79,26 @@ pub fn query_entity_references_two_phase(
     all_transforms: Query<&Transform>,
 ) {
     println!("=== Entity Reference Queries (Two-Phase) ===");
-    
+
     for (entity, target, transform) in targeting_entities.iter() {
         // First phase: we have the targeting entity
-        println!("Entity {:?} at {:?} targets {:?}", 
-                entity, transform.translation, target.0);
-        
+        println!(
+            "Entity {:?} at {:?} targets {:?}",
+            entity, transform.translation, target.0
+        );
+
         // Second phase: lookup the target entity
         if let Ok(target_transform) = all_transforms.get(target.0) {
             let distance = transform.translation.distance(target_transform.translation);
-            println!("  Target is at {:?}, distance: {:.2}", 
-                    target_transform.translation, distance);
+            println!(
+                "  Target is at {:?}, distance: {:.2}",
+                target_transform.translation, distance
+            );
         } else {
-            println!("  Warning: Target {:?} not found or has no Transform!", target.0);
+            println!(
+                "  Warning: Target {:?} not found or has no Transform!",
+                target.0
+            );
         }
     }
 }
@@ -95,19 +109,26 @@ pub fn query_ownership_relationships(
     owned_items: Query<(Entity, &Owner, &Transform)>,
 ) {
     println!("=== Ownership Relationships ===");
-    
+
     // Build ownership map for efficient lookup
     let mut ownership_map: HashMap<Entity, Vec<(Entity, Vec3)>> = HashMap::new();
     for (item_entity, owner, transform) in owned_items.iter() {
-        ownership_map.entry(owner.0).or_default().push((item_entity, transform.translation));
+        ownership_map
+            .entry(owner.0)
+            .or_default()
+            .push((item_entity, transform.translation));
     }
-    
+
     // Display ownership relationships
     for (owner_entity, owner_transform) in owners.iter() {
         if let Some(owned_items_data) = ownership_map.get(&owner_entity) {
-            println!("Player {:?} at {:?} owns {} items:", 
-                    owner_entity, owner_transform.translation, owned_items_data.len());
-            
+            println!(
+                "Player {:?} at {:?} owns {} items:",
+                owner_entity,
+                owner_transform.translation,
+                owned_items_data.len()
+            );
+
             for (item_entity, item_position) in owned_items_data {
                 println!("  - Item {:?} at {:?}", item_entity, item_position);
             }
@@ -121,27 +142,36 @@ pub fn query_group_memberships(
     members: Query<(Entity, &GroupMember, &Transform)>,
 ) {
     println!("=== Group Memberships ===");
-    
+
     // Build groups map
     let mut groups_map: HashMap<u32, (Entity, &Group)> = HashMap::new();
     for (entity, group) in groups.iter() {
         groups_map.insert(group.id, (entity, group));
     }
-    
+
     // Display members by group
     let mut group_members: HashMap<u32, Vec<(Entity, &GroupMember, &Transform)>> = HashMap::new();
     for member in members.iter() {
-        group_members.entry(member.1.group_id).or_default().push(member);
+        group_members
+            .entry(member.1.group_id)
+            .or_default()
+            .push(member);
     }
-    
+
     for (&group_id, members_list) in group_members.iter() {
         if let Some((group_entity, group)) = groups_map.get(&group_id) {
-            println!("Group '{}' ({:?}) has {} members:", 
-                    group.name, group_entity, members_list.len());
-            
+            println!(
+                "Group '{}' ({:?}) has {} members:",
+                group.name,
+                group_entity,
+                members_list.len()
+            );
+
             for (member_entity, member, transform) in members_list {
-                println!("  - {} {:?} at {:?}", 
-                        member.role, member_entity, transform.translation);
+                println!(
+                    "  - {} {:?} at {:?}",
+                    member.role, member_entity, transform.translation
+                );
             }
         }
     }
@@ -175,10 +205,10 @@ pub fn validate_entity_references(
     all_entities: Query<Entity>,
 ) {
     println!("=== Entity Reference Validation ===");
-    
+
     let valid_entities: std::collections::HashSet<Entity> = all_entities.iter().collect();
     let mut invalid_references = Vec::new();
-    
+
     // Validate target references
     for (entity, target) in targets.iter() {
         if !valid_entities.contains(&target.0) {
@@ -186,7 +216,7 @@ pub fn validate_entity_references(
             invalid_references.push(entity);
         }
     }
-    
+
     // Validate parent references
     for (entity, parent) in parents.iter() {
         if !valid_entities.contains(&parent.0) {
@@ -194,7 +224,7 @@ pub fn validate_entity_references(
             invalid_references.push(entity);
         }
     }
-    
+
     // Validate owner references
     for (entity, owner) in owners.iter() {
         if !valid_entities.contains(&owner.0) {
@@ -202,28 +232,24 @@ pub fn validate_entity_references(
             invalid_references.push(entity);
         }
     }
-    
+
     // Clean up invalid references (in a real system, you might want more sophisticated handling)
     for entity in invalid_references {
         println!("Cleaning up entity with invalid references: {:?}", entity);
         // commands.entity(entity).despawn(); // Uncomment if you want to despawn
     }
-    
+
     println!("Reference validation complete.");
 }
 
 /// Utility Systems for Managing Entity Relationships
 
 /// Create parent-child relationship
-pub fn create_parent_child_relationship(
-    mut commands: Commands,
-    parent: Entity,
-    child: Entity,
-) {
+pub fn create_parent_child_relationship(mut commands: Commands, parent: Entity, child: Entity) {
     // Add child to parent's children list
     // In Bevy 0.11, we use a simpler approach
     commands.entity(parent).insert(Children(vec![child]));
-    
+
     // Set parent reference on child
     commands.entity(child).insert(ChildOf(parent));
 }
@@ -239,7 +265,7 @@ pub fn remove_parent_child_relationship(
     if let Ok(mut children) = parents.get_mut(parent) {
         children.0.retain(|&c| c != child);
     }
-    
+
     // Remove parent reference from child
     commands.entity(child).remove::<ChildOf>();
 }
@@ -247,16 +273,18 @@ pub fn remove_parent_child_relationship(
 /// Example 7: Complex Relationship Query - Find Related Entities
 pub fn query_related_entities(
     // Find entities that are both children and have physics
-    child_physics: Query<(Entity, &ChildOf, &LinearVelocity), With<Player>>,
+    child_physics: Query<(Entity, &ChildOf, &Player)>,
     // Find their parents
     parents: Query<&Transform, (With<Parent>, Without<Player>)>,
 ) {
     println!("=== Complex Relationship Query ===");
-    
-    for (child_entity, child_of, velocity) in child_physics.iter() {
+
+    for (child_entity, child_of, player) in child_physics.iter() {
         if let Ok(parent_transform) = parents.get(child_of.0) {
-            println!("Player child {:?} (vel: {:?}) has parent at {:?}", 
-                    child_entity, velocity.0, parent_transform.translation);
+            println!(
+                "Player child {:?} (vel: {:?}) has parent at {:?}",
+                child_entity, player.velocity, parent_transform.translation
+            );
         }
     }
 }
@@ -266,13 +294,16 @@ pub struct EntityRelationSystems;
 
 impl EntityRelationSystems {
     pub fn add_to_app(app: &mut App) -> &mut App {
-        app.add_systems(Update, (
-            query_parent_child_relationships,
-            query_entity_references_two_phase,
-            query_ownership_relationships,
-            query_group_memberships,
-            validate_entity_references,
-            query_related_entities,
-        ))
+        app.add_systems(
+            Update,
+            (
+                query_parent_child_relationships,
+                query_entity_references_two_phase,
+                query_ownership_relationships,
+                query_group_memberships,
+                validate_entity_references,
+                query_related_entities,
+            ),
+        )
     }
 }

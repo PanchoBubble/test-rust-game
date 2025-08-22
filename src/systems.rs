@@ -1,50 +1,63 @@
-use bevy::prelude::*;
-use crate::components::{LinearVelocity, Acceleration, Friction};
+use crate::components::Player;
 use crate::resources::WorldBounds;
+use bevy::prelude::*;
 
-/// Physics integration system that applies acceleration and friction to velocity,
+/// World friction system that applies global friction to all entities
+pub fn world_friction(time: Res<Time>, bounds: Res<WorldBounds>, mut query: Query<&mut Player>) {
+    let delta = time.delta_seconds();
+
+    for mut player in query.iter_mut() {
+        // Apply world friction
+        player.velocity *= (1.0 - bounds.friction).powf(delta);
+    }
+}
+
+/// Physics integration system that applies acceleration and entity friction to velocity,
 /// then applies velocity to transform position
-pub fn physics_integration(
+pub fn player_physics_integration(
     time: Res<Time>,
-    mut query: Query<(&mut Transform, &mut LinearVelocity, &mut Acceleration, &Friction)>,
+    mut query: Query<(&mut Transform, &mut Player)>,
 ) {
     let delta = time.delta_seconds();
-    
-    for (mut transform, mut velocity, mut acceleration, friction) in query.iter_mut() {
+
+    for (mut transform, mut player) in query.iter_mut() {
         // Apply acceleration to velocity
-        velocity.0 += acceleration.0 * delta;
-        
-        // Apply friction to velocity (exponential decay for smooth feel)
-        velocity.0 *= (1.0 - friction.0).powf(delta);
-        
+        let player_acceleration = player.acceleration;
+        player.velocity += player_acceleration * delta;
+
+        // Apply entity-specific friction to velocity
+        let player_friction = player.friction;
+        player.velocity *= (1.0 - player_friction).powf(delta);
+
         // Apply velocity to position
-        transform.translation.x += velocity.0.x * delta;
-        transform.translation.y += velocity.0.y * delta;
-        
+        transform.translation.x += player.velocity.x * delta;
+        transform.translation.y += player.velocity.y * delta;
+
         // Reset acceleration (will be set by input system next frame)
-        acceleration.0 = Vec2::ZERO;
+        player.acceleration = Vec2::ZERO;
     }
 }
 
 /// Boundary collision system that handles collisions with world bounds
 pub fn boundary_collision(
     bounds: Res<WorldBounds>,
-    mut query: Query<(&mut Transform, &mut LinearVelocity)>,
+    mut query: Query<(&mut Transform, &mut Player)>,
 ) {
-    for (mut transform, mut velocity) in query.iter_mut() {
+    for (mut transform, mut player) in query.iter_mut() {
         let position = Vec2::new(transform.translation.x, transform.translation.y);
-        
+
         // Check X boundaries
         if position.x <= bounds.min.x || position.x >= bounds.max.x {
-            velocity.0.x = -velocity.0.x; // Reverse X velocity
-            // Clamp position to prevent escaping bounds
+            player.velocity.x = player.velocity.x * bounds.bounce_factor;
+            player.velocity.x = -player.velocity.x; // Reverse X velocity
+
             transform.translation.x = transform.translation.x.clamp(bounds.min.x, bounds.max.x);
         }
-        
+
         // Check Y boundaries
         if position.y <= bounds.min.y || position.y >= bounds.max.y {
-            velocity.0.y = -velocity.0.y; // Reverse Y velocity
-            // Clamp position to prevent escaping bounds
+            player.velocity.y = player.velocity.y * bounds.bounce_factor;
+            player.velocity.y = -player.velocity.y; // Reverse Y velocity
             transform.translation.y = transform.translation.y.clamp(bounds.min.y, bounds.max.y);
         }
     }

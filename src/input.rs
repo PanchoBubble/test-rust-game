@@ -1,19 +1,21 @@
-use crate::components::{Acceleration, Player};
+use crate::components::Player;
 use bevy::prelude::*;
 
 /// Input handling system for WASD movement
 pub fn handle_input(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Acceleration, With<Player>>,
+    mut query: Query<(&mut Player, &mut Sprite)>,
 ) {
     let mut input_force: f32 = 3000.0; // Base acceleration force from input
 
-    for mut acceleration in query.iter_mut() {
+    for (mut player, mut sprite) in query.iter_mut() {
         let mut input_vector = Vec2::ZERO;
 
+        sprite.color = Color::rgb(0.25, 0.25, 0.75);
         if keyboard_input.pressed(KeyCode::ShiftLeft) || keyboard_input.pressed(KeyCode::ShiftRight)
         {
-            input_force = input_force * 3.0
+            input_force = input_force * 3.0;
+            sprite.color = Color::rgb(0.9, 0.25, 0.75);
         }
 
         // Check WASD keys and build input vector
@@ -36,6 +38,6 @@ pub fn handle_input(
         }
 
         // Apply input force to acceleration
-        acceleration.0 = input_vector * input_force;
+        player.acceleration = input_vector * input_force;
     }
 }

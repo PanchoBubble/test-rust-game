@@ -1,49 +1,29 @@
 use bevy::prelude::*;
 
 /// Marker component for the player cube
-#[derive(Component, Default, Debug)]
-pub struct Player;
-
-/// Linear velocity component for physics entities
-#[derive(Component, Default, Debug)]
-pub struct LinearVelocity(pub Vec2);
-
-impl LinearVelocity {
-    pub fn new(x: f32, y: f32) -> Self {
-        Self(Vec2::new(x, y))
-    }
-    
-    pub fn zero() -> Self {
-        Self(Vec2::ZERO)
-    }
-}
-
-/// Acceleration component for physics entities
-#[derive(Component, Default, Debug)]
-pub struct Acceleration(pub Vec2);
-
-impl Acceleration {
-    pub fn new(x: f32, y: f32) -> Self {
-        Self(Vec2::new(x, y))
-    }
-    
-    pub fn zero() -> Self {
-        Self(Vec2::ZERO)
-    }
-}
-
-/// Friction coefficient component (0.0 = no friction, 1.0 = maximum friction)
 #[derive(Component, Debug)]
-pub struct Friction(pub f32);
+pub struct Player {
+    pub acceleration: Vec2,
+    pub velocity: Vec2,
+    pub friction: f32,
+}
 
-impl Default for Friction {
-    fn default() -> Self {
-        Self(0.95) // Default friction value for good game feel
+impl Player {
+    pub fn new(acceleration: Vec2, velocity: Vec2, friction: f32) -> Self {
+        Self {
+            acceleration,
+            velocity,
+            friction,
+        }
     }
 }
 
-impl Friction {
-    pub fn new(friction: f32) -> Self {
-        Self(friction.clamp(0.0, 1.0))
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            acceleration: Vec2::new(0.0, 0.0),
+            velocity: Vec2::new(0.0, 0.0),
+            friction: 0.95,
+        }
     }
 }

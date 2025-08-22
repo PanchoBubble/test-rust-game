@@ -1,10 +1,5 @@
 use bevy::prelude::*;
-use bevy_wasm_game::{
-    components::*,
-    resources::*,
-    input::*,
-    systems::*,
-};
+use bevy_wasm_game::{components::*, input::*, resources::*, systems::*};
 
 fn main() {
     App::new()
@@ -19,7 +14,10 @@ fn main() {
         .insert_resource(WorldBounds::default_bounds())
         .add_systems(Startup, setup)
         .add_systems(Update, handle_input)
-        .add_systems(FixedUpdate, (physics_integration, boundary_collision).chain())
+        .add_systems(
+            FixedUpdate,
+            (world_friction, player_physics_integration, boundary_collision).chain(),
+        )
         .run();
 }
 
@@ -37,9 +35,6 @@ fn setup(mut commands: Commands) {
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
             ..default()
         },
-        Player,
-        LinearVelocity::zero(),
-        Acceleration::zero(),
-        Friction::default(),
+        Player::default(),
     ));
 }

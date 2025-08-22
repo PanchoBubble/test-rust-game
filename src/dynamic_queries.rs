@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use bevy::ecs::component::ComponentId;
 use crate::components::*;
+use bevy::ecs::component::ComponentId;
+use bevy::prelude::*;
 use std::any::TypeId;
 use std::collections::HashMap;
 
@@ -12,23 +12,23 @@ use std::collections::HashMap;
 /// Note: Bevy 0.11 has limited QueryBuilder support, showing conceptual approach
 pub fn dynamic_query_example(_world: &World) {
     println!("=== Dynamic Query Construction (Conceptual) ===");
-    
+
     // In Bevy 0.11, QueryBuilder is not available in the same way
     // This shows the conceptual approach that would be used
-    
+
     // Build a query dynamically based on runtime conditions
     let include_transform = true;
     let include_velocity = true;
-    
+
     println!("Would build query with:");
     if include_transform {
         println!("  - Transform component");
     }
-    
+
     if include_velocity {
         println!("  - LinearVelocity component");
     }
-    
+
     // Note: In practice, building and executing dynamic queries
     // requires careful handling of the type system
     println!("Dynamic query concept demonstrated");
@@ -51,11 +51,11 @@ impl ComponentRegistry {
             self.type_ids.insert(TypeId::of::<T>(), id);
         }
     }
-    
+
     pub fn get_component_name(&self, id: ComponentId) -> Option<&String> {
         self.type_names.get(&id)
     }
-    
+
     pub fn get_component_id<T: 'static>(&self) -> Option<ComponentId> {
         self.type_ids.get(&TypeId::of::<T>()).copied()
     }
@@ -64,13 +64,10 @@ impl ComponentRegistry {
 /// Initialize component registry with game components
 pub fn setup_component_registry(world: &mut World) {
     let mut registry = ComponentRegistry::default();
-    
+
     registry.register_component::<Transform>(world, "Transform");
     registry.register_component::<Player>(world, "Player");
-    registry.register_component::<LinearVelocity>(world, "LinearVelocity");
-    registry.register_component::<Acceleration>(world, "Acceleration");
-    registry.register_component::<Friction>(world, "Friction");
-    
+
     world.insert_resource(registry);
 }
 
@@ -85,16 +82,16 @@ impl EntityInspector {
     pub fn new(registry: ComponentRegistry) -> Self {
         Self { registry }
     }
-    
+
     pub fn inspect_entity(&self, world: &World, entity: Entity) {
         println!("=== Inspecting Entity {:?} ===", entity);
-        
+
         if let Some(entity_ref) = world.get_entity(entity) {
             let archetype = entity_ref.archetype();
-            
+
             println!("Archetype ID: {:?}", archetype.id());
             println!("Component count: {}", archetype.components().count());
-            
+
             // List all components on this entity
             for component_id in archetype.components() {
                 if let Some(name) = self.registry.get_component_name(component_id) {
@@ -112,23 +109,20 @@ impl EntityInspector {
 /// Example 4: Conditional Query System
 /// Build queries based on component availability
 
-pub fn conditional_query_system(
-    _world: &World,
-    registry: Res<ComponentRegistry>,
-) {
+pub fn conditional_query_system(_world: &World, registry: Res<ComponentRegistry>) {
     println!("=== Conditional Query System ===");
-    
+
     // Check what components are available
-    let has_velocity = registry.get_component_id::<LinearVelocity>().is_some();
-    let has_acceleration = registry.get_component_id::<Acceleration>().is_some();
-    
-    if has_velocity && has_acceleration {
+    let has_player = registry.get_component_id::<Player>().is_some();
+    let has_transform = registry.get_component_id::<Transform>().is_some();
+
+    if has_player && has_transform {
         println!("Full physics components available - using complex physics query");
         // In practice, you'd build and execute the appropriate query
-    } else if has_velocity {
-        println!("Only velocity available - using simple movement query");
+    } else if has_transform {
+        println!("Only transform available - using simple movement query");
     } else {
-        println!("No physics components - using transform-only query");
+        println!("No physics components - using entity-only query");
     }
 }
 
@@ -145,17 +139,24 @@ impl ScriptQueryInterface {
             world: world as *const World,
         }
     }
-    
+
     /// Find entities with specific components (by name)
     pub fn find_entities_with_components(&self, component_names: &[&str]) -> Vec<Entity> {
         // This would implement actual component name resolution and querying
         // For now, return empty vec
-        println!("Searching for entities with components: {:?}", component_names);
+        println!(
+            "Searching for entities with components: {:?}",
+            component_names
+        );
         Vec::new()
     }
-    
+
     /// Get component data as string (for debugging/scripting)
-    pub fn get_component_data_string(&self, entity: Entity, component_name: &str) -> Option<String> {
+    pub fn get_component_data_string(
+        &self,
+        entity: Entity,
+        component_name: &str,
+    ) -> Option<String> {
         println!("Getting {} component data for {:?}", component_name, entity);
         // This would implement actual component data serialization
         Some(format!("{}(data)", component_name))
@@ -171,37 +172,43 @@ pub struct QueryProfiler {
 }
 
 impl QueryProfiler {
-    pub fn profile_query<F>(&mut self, query_name: &str, query_fn: F) -> std::time::Duration 
-    where 
+    pub fn profile_query<F>(&mut self, query_name: &str, query_fn: F) -> std::time::Duration
+    where
         F: FnOnce(),
     {
         let start = std::time::Instant::now();
         query_fn();
         let duration = start.elapsed();
-        
+
         self.query_times
             .entry(query_name.to_string())
             .or_default()
             .push(duration);
-        
+
         duration
     }
-    
+
     pub fn get_average_time(&self, query_name: &str) -> Option<std::time::Duration> {
         self.query_times.get(query_name).map(|times| {
             let total: std::time::Duration = times.iter().sum();
             total / times.len() as u32
         })
     }
-    
+
     pub fn print_profile_report(&self) {
         println!("=== Query Performance Profile ===");
         for (query_name, times) in &self.query_times {
             if let Some(avg) = self.get_average_time(query_name) {
                 let min = times.iter().min().unwrap();
                 let max = times.iter().max().unwrap();
-                println!("{}: avg={:?}, min={:?}, max={:?}, samples={}", 
-                        query_name, avg, min, max, times.len());
+                println!(
+                    "{}: avg={:?}, min={:?}, max={:?}, samples={}",
+                    query_name,
+                    avg,
+                    min,
+                    max,
+                    times.len()
+                );
             }
         }
     }
@@ -222,17 +229,17 @@ impl DynamicFilter {
             exclude_components: Vec::new(),
         }
     }
-    
+
     pub fn with_component(mut self, component_name: &str) -> Self {
         self.include_components.push(component_name.to_string());
         self
     }
-    
+
     pub fn without_component(mut self, component_name: &str) -> Self {
         self.exclude_components.push(component_name.to_string());
         self
     }
-    
+
     pub fn describe(&self) -> String {
         format!(
             "Filter: with={:?}, without={:?}",
@@ -246,15 +253,15 @@ impl DynamicFilter {
 
 pub fn explore_archetypes(world: &World, registry: Res<ComponentRegistry>) {
     println!("=== Archetype Explorer ===");
-    
+
     let archetypes = world.archetypes();
     println!("Total archetypes: {}", archetypes.len());
-    
+
     for archetype in archetypes.iter() {
         println!("\nArchetype {:?}:", archetype.id());
         println!("  Entity count: {}", archetype.len());
         println!("  Components:");
-        
+
         for component_id in archetype.components() {
             if let Some(name) = registry.get_component_name(component_id) {
                 println!("    - {}", name);
@@ -276,13 +283,13 @@ impl EntitySearcher {
     pub fn new() -> Self {
         Self {}
     }
-    
+
     pub fn search_by_components(&self, patterns: &[&str]) -> Vec<Entity> {
         println!("Searching entities with component patterns: {:?}", patterns);
         // This would implement actual pattern matching and entity lookup
         Vec::new()
     }
-    
+
     pub fn search_by_archetype_similarity(&self, reference_entity: Entity) -> Vec<Entity> {
         println!("Finding entities similar to {:?}", reference_entity);
         // This would find entities with similar component combinations
@@ -298,10 +305,7 @@ impl DynamicQuerySystems {
         app.init_resource::<ComponentRegistry>()
             .init_resource::<QueryProfiler>()
             .add_systems(Startup, setup_component_registry)
-            .add_systems(Update, (
-                conditional_query_system,
-                explore_archetypes,
-            ))
+            .add_systems(Update, (conditional_query_system, explore_archetypes))
     }
 }
 
@@ -313,21 +317,13 @@ pub trait DynamicComponent {
 
 // Implement for our game components
 impl DynamicComponent for Player {
-    fn type_name() -> &'static str { "Player" }
-    fn as_debug_string(&self) -> String { format!("{:?}", self) }
-}
-
-impl DynamicComponent for LinearVelocity {
-    fn type_name() -> &'static str { "LinearVelocity" }
-    fn as_debug_string(&self) -> String { format!("LinearVelocity({:?})", self.0) }
-}
-
-impl DynamicComponent for Acceleration {
-    fn type_name() -> &'static str { "Acceleration" }
-    fn as_debug_string(&self) -> String { format!("Acceleration({:?})", self.0) }
-}
-
-impl DynamicComponent for Friction {
-    fn type_name() -> &'static str { "Friction" }
-    fn as_debug_string(&self) -> String { format!("Friction({})", self.0) }
+    fn type_name() -> &'static str {
+        "Player"
+    }
+    fn as_debug_string(&self) -> String {
+        format!(
+            "Player(vel: {:?}, accel: {:?}, friction: {})",
+            self.velocity, self.acceleration, self.friction
+        )
+    }
 }
