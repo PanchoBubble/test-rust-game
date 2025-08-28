@@ -20,7 +20,7 @@ impl WorldBounds {
             min: Vec2::new(-half_width, -half_height),
             max: Vec2::new(half_width, half_height),
             friction: DEFAULT_FRICTION,
-            bounce_factor: 0.5,
+            bounce_factor: 2.0,
         }
     }
 
